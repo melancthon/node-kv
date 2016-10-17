@@ -72,7 +72,7 @@ namespace kv {
 		}
 
 		v8::Local<v8::Value> v8value() {
-			return NanNew(_val);
+			return Nan::New(_val);//.ToLocalChecked();
 		}
 
 		const char* data() {
@@ -104,14 +104,14 @@ namespace kv {
 	}
 
 	template<> inline number_type<int64_t>::number_type(v8::Handle<v8::Value> val) {
-		NanUtf8String utf8(val);
+		Nan::Utf8String utf8(val);
 		_val = atoll(*utf8);
 	}
 
 	template<> inline v8::Local<v8::Value> number_type<int64_t>::v8value() {
 		char buf[32];
 		sprintf(buf, "%lld", (long long int)_val);
-		return NanNew(buf);
+		return Nan::New(buf).ToLocalChecked();
 	}
 
 	template<class T, class CT, class ST> struct lvl_rocks_comparator {

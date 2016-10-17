@@ -9,123 +9,123 @@ using namespace kv::lmdb;
 
 void txn::setup_export(Handle<Object>& exports) {
 	// Prepare constructor template
-	Local<FunctionTemplate> txnTpl = NanNew<FunctionTemplate>(txn::ctor);
-	txnTpl->SetClassName(NanNew("Txn"));
+	Local<FunctionTemplate> txnTpl = Nan::New<FunctionTemplate>(txn::ctor);//.ToLocalChecked();
+	txnTpl->SetClassName(Nan::New("Txn").ToLocalChecked());
 	txnTpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	// Add functions to the prototype
-	NODE_SET_PROTOTYPE_METHOD(txnTpl, "commit", txn::commit);
-	NODE_SET_PROTOTYPE_METHOD(txnTpl, "abort", txn::abort);
-	NODE_SET_PROTOTYPE_METHOD(txnTpl, "reset", txn::reset);
-	NODE_SET_PROTOTYPE_METHOD(txnTpl, "renew", txn::renew);
+	Nan::SetPrototypeMethod(txnTpl, "commit", txn::commit);
+	Nan::SetPrototypeMethod(txnTpl, "abort", txn::abort);
+	Nan::SetPrototypeMethod(txnTpl, "reset", txn::reset);
+	Nan::SetPrototypeMethod(txnTpl, "renew", txn::renew);
 
 	// Set exports
-	exports->Set(NanNew("Txn"), txnTpl->GetFunction());
+	exports->Set(Nan::New("Txn").ToLocalChecked(), txnTpl->GetFunction());
 }
 
 NAN_METHOD(txn::ctor) {
-	NanScope();
+	Nan::HandleScope();
 
-	env *ew = ObjectWrap::Unwrap<env>(args[0]->ToObject());
-	txn *ptr = new txn(ew->_env, args[1]->BooleanValue());
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info[0]->ToObject());
+	txn *ptr = new txn(ew->_env, info[1]->BooleanValue());
 
 	int rc = mdb_txn_begin(ptr->_env, NULL, ptr->_readonly ? MDB_RDONLY : 0, &ptr->_txn);
 
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
-	ptr->Wrap(args.This());
-	NanReturnValue(args.This());
+	ptr->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(txn::commit) {
-	NanScope();
+	Nan::HandleScope();
 
-	txn *tw = ObjectWrap::Unwrap<txn>(args.This());
+	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info.This());
 
 	if (!tw->_txn) {
-		NanThrowError("The transaction is already closed.");
-		NanReturnUndefined();
+		Nan::ThrowError("The transaction is already closed.");
+		return;//return;
 	}
 
 	int rc = mdb_txn_commit(tw->_txn);
 	tw->_txn = NULL;
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
-	NanReturnUndefined();
+	return;//return;
 }
 
 NAN_METHOD(txn::abort) {
-	NanScope();
+	Nan::HandleScope();
 
-	txn *tw = ObjectWrap::Unwrap<txn>(args.This());
+	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info.This());
 
 	if (!tw->_txn) {
-		NanThrowError("The transaction is already closed.");
-		NanReturnUndefined();
+		Nan::ThrowError("The transaction is already closed.");
+		return;//return;
 	}
 
 	mdb_txn_abort(tw->_txn);
 	tw->_txn = NULL;
 
-	NanReturnUndefined();
+	return;//return;
 }
 
 NAN_METHOD(txn::reset) {
-	NanScope();
+	Nan::HandleScope();
 
-	txn *tw = ObjectWrap::Unwrap<txn>(args.This());
+	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info.This());
 
 	if (!tw->_txn) {
-		NanThrowError("The transaction is already closed.");
-		NanReturnUndefined();
+		Nan::ThrowError("The transaction is already closed.");
+		return;//return;
 	}
 
 	if (!tw->_readonly) {
-		NanThrowError("Only readonly transaction can be reset.");
-		NanReturnUndefined();
+		Nan::ThrowError("Only readonly transaction can be reset.");
+		return;//return;
 	}
 
 	mdb_txn_reset(tw->_txn);
-	NanReturnUndefined();
+	return;//return;
 }
 
 NAN_METHOD(txn::renew) {
-	NanScope();
+	Nan::HandleScope();
 
-	txn *tw = ObjectWrap::Unwrap<txn>(args.This());
+	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info.This());
 
 	if (tw->_readonly) {
 		if (!tw->_txn) {
-			NanThrowError("The transaction is already closed.");
-			NanReturnUndefined();
+			Nan::ThrowError("The transaction is already closed.");
+			return;//return;
 		}
 
 		int rc = mdb_txn_renew(tw->_txn);
 		if (rc != 0) {
-			NanThrowError(mdb_strerror(rc));
-			NanReturnUndefined();
+			Nan::ThrowError(mdb_strerror(rc));
+			return;//return;
 		}
 	}
 	else {
 		if (tw->_txn) {
-			NanThrowError("The transaction is still opened.");
-			NanReturnUndefined();
+			Nan::ThrowError("The transaction is still opened.");
+			return;//return;
 		}
 
 		int rc = mdb_txn_begin(tw->_env, NULL, 0, &tw->_txn);
 		if (rc != 0) {
-			NanThrowError(mdb_strerror(rc));
-			NanReturnUndefined();
+			Nan::ThrowError(mdb_strerror(rc));
+			return;//return;
 		}
 	}
 
-	NanReturnUndefined();
+	return;//return;
 }
 
 txn::txn(MDB_env* env, bool readonly) : _readonly(readonly), _txn(NULL), _env(env) {

@@ -7,7 +7,7 @@ namespace kv {
 		class env;
 		void setup_db_export(v8::Handle<v8::Object>& exports);
 
-		template <class K, class V> class db : public node::ObjectWrap {
+		template <class K, class V> class db : public Nan::ObjectWrap {
 		public:
 			typedef K key_type;
 			typedef V value_type;

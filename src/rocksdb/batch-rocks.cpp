@@ -9,31 +9,31 @@ namespace kv { namespace rocks {
 
 void batch::setup_export(Handle<Object>& exports) {
 	// Prepare constructor template
-	Local<FunctionTemplate> batchTpl = NanNew<FunctionTemplate>(batch::ctor);
-	batchTpl->SetClassName(NanNew("Batch"));
+	Local<FunctionTemplate> batchTpl = Nan::New<FunctionTemplate>(batch::ctor);
+	batchTpl->SetClassName(Nan::New("Batch").ToLocalChecked());
 	batchTpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	// Add functions to the prototype
-	NODE_SET_PROTOTYPE_METHOD(batchTpl, "clear", batch::clear);
+	Nan::SetPrototypeMethod(batchTpl, "clear", batch::clear);
 
 	// Set exports
-	exports->Set(NanNew("Batch"), batchTpl->GetFunction());
+	exports->Set(Nan::New("Batch").ToLocalChecked(), batchTpl->GetFunction());
 }
 
 NAN_METHOD(batch::ctor) {
-	NanScope();
+	Nan::HandleScope scope;
 	batch* ptr = new batch;
-	ptr->Wrap(args.This());
-	NanReturnValue(args.This());
+	ptr->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(batch::clear) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	batch* bat = ObjectWrap::Unwrap<batch>(args.This());
+	batch* bat = Nan::ObjectWrap::Unwrap<batch>(info.This());
 	bat->_batch.Clear();
 
-	NanReturnUndefined();
+	return;
 }
 
 } } // namespace kv | namespace rocks

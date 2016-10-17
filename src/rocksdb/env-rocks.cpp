@@ -9,47 +9,47 @@ namespace kv { namespace rocks {
 
 void env::setup_export(v8::Handle<v8::Object>& exports) {
 	// Prepare constructor template
-	Local<FunctionTemplate> envTpl = NanNew<FunctionTemplate>(env::ctor);
-	envTpl->SetClassName(NanNew("Env"));
+	Local<FunctionTemplate> envTpl = Nan::New<FunctionTemplate>(env::ctor);
+	envTpl->SetClassName(Nan::New("Env").ToLocalChecked());
 	envTpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	// Add functions to the prototype
-	NODE_SET_PROTOTYPE_METHOD(envTpl, "open", env::open);
+	Nan::SetPrototypeMethod(envTpl, "open", env::open);
 
 	// Set exports
-	exports->Set(NanNew("Env"), envTpl->GetFunction());
+	exports->Set(Nan::New("Env").ToLocalChecked(), envTpl->GetFunction());
 
 }
 
 NAN_METHOD(env::ctor) {
-	NanScope();
+	Nan::HandleScope scope;
 
 	env* ptr = new env();
-	ptr->Wrap(args.This());
-	NanReturnValue(args.This());
+	ptr->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(env::open) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	env* envw = node::ObjectWrap::Unwrap<env>(args.This());
+	env* envw = Nan::ObjectWrap::Unwrap<env>(info.This());
 
-	NanUtf8String path(args[0]);
+	Nan::Utf8String path(info[0]);
 	DB* pdb;
 
 	Options opt;
 	opt.create_if_missing = true;
 	opt.create_missing_column_families = true;
-	if (args[1]->IsNumber()) opt.write_buffer_size = size_t(args[1]->NumberValue());
+	if (info[1]->IsNumber()) opt.write_buffer_size = size_t(info[1]->NumberValue());
 
 	Status s = DB::Open(opt, *path, envw->_desc, &envw->_handles, &pdb);
 	if (!s.ok()) {
-		NanThrowError(s.ToString().c_str());
-		NanReturnUndefined();
+		Nan::ThrowError(s.ToString().c_str());
+		return;
 	}
 
 	envw->_db = pdb;
-	NanReturnUndefined();
+	return;
 }
 
 env::env() : _db(NULL) {

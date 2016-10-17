@@ -24,30 +24,30 @@ template <class K, class V> void db<K, V>::setup_export(Handle<Object>& exports)
 	sprintf(class_name, "DB_%s_%s", K::type_name, V::type_name);
 
 	// Prepare constructor template
-	Local<FunctionTemplate> dbiTpl = NanNew<FunctionTemplate>(db::ctor);
-	dbiTpl->SetClassName(NanNew(class_name));
+	Local<FunctionTemplate> dbiTpl = Nan::New<FunctionTemplate>(db::ctor);
+	dbiTpl->SetClassName(Nan::New(class_name).ToLocalChecked());
 	dbiTpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	// Add functions to the prototype
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "init", db::init);
+	Nan::SetPrototypeMethod(dbiTpl, "init", db::init);
 
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "get", db::get);
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "put", db::put);
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "del", db::del);
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "write", db::write);
+	Nan::SetPrototypeMethod(dbiTpl, "get", db::get);
+	Nan::SetPrototypeMethod(dbiTpl, "put", db::put);
+	Nan::SetPrototypeMethod(dbiTpl, "del", db::del);
+	Nan::SetPrototypeMethod(dbiTpl, "write", db::write);
 
 	// Set exports
-	exports->Set(NanNew(class_name), dbiTpl->GetFunction());
+	exports->Set(Nan::New(class_name).ToLocalChecked(), dbiTpl->GetFunction());
 }
 
 #define KVDB db<K, V>
 #define KVDB_METHOD(fn) template <class K, class V> NAN_METHOD(KVDB::fn)
 
 KVDB_METHOD(ctor) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	NanUtf8String name(args[1]);
-	env *ew = node::ObjectWrap::Unwrap<env>(args[0]->ToObject());
+	Nan::Utf8String name(info[1]);
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info[0]->ToObject());
 
 	ColumnFamilyOptions opt;
 	typedef lvl_rocks_comparator<K, Comparator, Slice> cmp;
@@ -56,103 +56,103 @@ KVDB_METHOD(ctor) {
 	int idx = ew->register_db(ColumnFamilyDescriptor(*name, opt));
 
 	db* ptr = new db(idx);
-	ptr->Wrap(args.This());
-	NanReturnValue(args.This());
+	ptr->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 KVDB_METHOD(init) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
-	env *ew = node::ObjectWrap::Unwrap<env>(args[0]->ToObject());
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info[0]->ToObject());
 	dw->_db = ew->_db;
 	dw->_cf = ew->_handles[dw->_cfidx];
 
-	NanReturnUndefined();
+	return;
 }
 
 KVDB_METHOD(get) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
 
-	K k(args[0]);
+	K k(info[0]);
 	Slice key(k.data(), k.size());
 
 	std::string val;
 	Status s = dw->_db->Get(ReadOptions(), dw->_cf, key, &val);
 
 	if (s.IsNotFound()) {
-		NanReturnNull();
+		info.GetReturnValue().Set(Nan::Null());
 	}
 
 	if (!s.ok()) {
-		NanThrowError(s.ToString().c_str());
-		NanReturnUndefined();
+		Nan::ThrowError(s.ToString().c_str());
+		return;
 	}
 
 	V v(val.data(), val.size());
-	NanReturnValue(v.v8value());
+	info.GetReturnValue().Set(v.v8value());
 }
 
 KVDB_METHOD(put) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
 
-	K k(args[0]);
-	V v(args[1]);
+	K k(info[0]);
+	V v(info[1]);
 	Slice key(k.data(), k.size()), val(v.data(), v.size());
 
-	if (args[2]->IsObject()) {
-		batch *bw = ObjectWrap::Unwrap<batch>(args[2]->ToObject());
+	if (info[2]->IsObject()) {
+		batch *bw = Nan::ObjectWrap::Unwrap<batch>(info[2]->ToObject());
 		bw->_batch.Put(dw->_cf, key, val);
 	} else {
 		Status s = dw->_db->Put(WriteOptions(), dw->_cf, key, val);
 
 		if (!s.ok()) {
-			NanThrowError(s.ToString().c_str());
+			Nan::ThrowError(s.ToString().c_str());
 		}
 	}
 
-	NanReturnUndefined();
+	return;
 }
 
 KVDB_METHOD(del) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
 
-	K k(args[0]);
+	K k(info[0]);
 	Slice key(k.data(), k.size());
 
-	if (args[1]->IsObject()) {
-		batch *bw = ObjectWrap::Unwrap<batch>(args[1]->ToObject());
+	if (info[1]->IsObject()) {
+		batch *bw = Nan::ObjectWrap::Unwrap<batch>(info[1]->ToObject());
 		bw->_batch.Delete(dw->_cf, key);
 	} else {
 		Status s = dw->_db->Delete(WriteOptions(), dw->_cf, key);
 
 		if (!s.ok()) {
-			NanThrowError(s.ToString().c_str());
+			Nan::ThrowError(s.ToString().c_str());
 		}
 	}
 
-	NanReturnUndefined();
+	return;
 }
 
 KVDB_METHOD(write) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
-	batch *bw = ObjectWrap::Unwrap<batch>(args[0]->ToObject());
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
+	batch *bw = Nan::ObjectWrap::Unwrap<batch>(info[0]->ToObject());
 
 	Status s = dw->_db->Write(WriteOptions(), &bw->_batch);
 
 	if (!s.ok()) {
-		NanThrowError(s.ToString().c_str());
+		Nan::ThrowError(s.ToString().c_str());
 	}
 
-	NanReturnUndefined();
+	return;
 }
 
 template <class K, class V> db<K, V>::db(int idx) : _cfidx(idx), _db(NULL), _cf(NULL) {

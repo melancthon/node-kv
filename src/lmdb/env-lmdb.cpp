@@ -9,101 +9,101 @@ using namespace kv::lmdb;
 
 void env::setup_export(Handle<Object>& exports) {
 	// Prepare constructor template
-	Local<FunctionTemplate> envTpl = NanNew<FunctionTemplate>(env::ctor);
-	envTpl->SetClassName(NanNew("Env"));
+	Local<FunctionTemplate> envTpl = Nan::New<FunctionTemplate>(env::ctor);
+	envTpl->SetClassName(Nan::New("Env").ToLocalChecked());
 	envTpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	// Add functions to the prototype
-	NODE_SET_PROTOTYPE_METHOD(envTpl, "setMapSize", env::setMapSize);
-	NODE_SET_PROTOTYPE_METHOD(envTpl, "setMaxDbs", env::setMaxDbs);
+	Nan::SetPrototypeMethod(envTpl, "setMapSize", env::setMapSize);
+	Nan::SetPrototypeMethod(envTpl, "setMaxDbs", env::setMaxDbs);
 
-	NODE_SET_PROTOTYPE_METHOD(envTpl, "open", env::open);
-	NODE_SET_PROTOTYPE_METHOD(envTpl, "close", env::close);
-	NODE_SET_PROTOTYPE_METHOD(envTpl, "sync", env::sync);
+	Nan::SetPrototypeMethod(envTpl, "open", env::open);
+	Nan::SetPrototypeMethod(envTpl, "close", env::close);
+	Nan::SetPrototypeMethod(envTpl, "sync", env::sync);
 
 	// Set exports
-	exports->Set(NanNew("Env"), envTpl->GetFunction());
+	exports->Set(Nan::New("Env").ToLocalChecked(), envTpl->GetFunction());
 }
 
 NAN_METHOD(env::ctor) {
-	NanScope();
+	Nan::HandleScope();
 
 	env *ptr = new env();
 	int rc = mdb_env_create(&ptr->_env);
 
 	if (rc != 0) {
 		mdb_env_close(ptr->_env);
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return; //return;
 	}
 
-	ptr->Wrap(args.This());
-	NanReturnValue(args.This());
+	ptr->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(env::setMapSize) {
-	NanScope();
+	Nan::HandleScope();
 
-	env *ew = ObjectWrap::Unwrap<env>(args.This());
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 
 	if (!ew->_env) {
-		NanThrowError("The environment is already closed.");
-		NanReturnUndefined();
+		Nan::ThrowError("The environment is already closed.");
+		return; //return;
 	}
 
-	if (args[0]->IsNumber()) mdb_env_set_mapsize(ew->_env, size_t(args[0]->NumberValue()));
-	NanReturnUndefined();
+	if (info[0]->IsNumber()) mdb_env_set_mapsize(ew->_env, size_t(info[0]->NumberValue()));
+	return; //return;
 }
 
 NAN_METHOD(env::setMaxDbs) {
-	NanScope();
+	Nan::HandleScope();
 
-	env *ew = ObjectWrap::Unwrap<env>(args.This());
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 
 	if (!ew->_env) {
-		NanThrowError("The environment is already closed.");
-		NanReturnUndefined();
+		Nan::ThrowError("The environment is already closed.");
+		return;//return;
 	}
 
-	if (args[0]->IsNumber()) mdb_env_set_maxdbs(ew->_env, args[0]->Uint32Value());
-	NanReturnUndefined();
+	if (info[0]->IsNumber()) mdb_env_set_maxdbs(ew->_env, info[0]->Uint32Value());
+	return; //return;
 }
 
 NAN_METHOD(env::open) {
 	int rc = 0;
-	NanScope();
+	Nan::HandleScope();
 
-	env *ew = ObjectWrap::Unwrap<env>(args.This());
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 	if (!ew->_env) {
-		NanThrowError("The environment is already closed.");
-		NanReturnUndefined();
+		Nan::ThrowError("The environment is already closed.");
+		return;//return;
 	}
 
-	NanUtf8String path(args[0]);
+	Nan::Utf8String path(info[0]);
 	int flags = MDB_NOSYNC;
 	rc = mdb_env_open(ew->_env, *path, flags, 0664);
 
 	if (rc != 0) {
 		mdb_env_close(ew->_env);
 		ew->_env = NULL;
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
 	int cleared = 0;
 	mdb_reader_check(ew->_env, &cleared);
 
-	NanReturnUndefined();
+	return;//return;
 }
 
 NAN_METHOD(env::close) {
-	NanScope();
+	Nan::HandleScope();
 
-	env *ew = ObjectWrap::Unwrap<env>(args.This());
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 
 	if (!ew->_env) {
-		NanThrowError("The environment is already closed.");
-		NanReturnUndefined();
+		Nan::ThrowError("The environment is already closed.");
+		return;//return;
 	}
 
 	if (ew->_read_lock) mdb_txn_abort(ew->_read_lock);
@@ -112,12 +112,12 @@ NAN_METHOD(env::close) {
 	mdb_env_close(ew->_env);
 	ew->_env = NULL;
 
-	NanReturnUndefined();
+	return;//return;
 }
 
 struct uv_env_sync {
 	uv_work_t request;
-	NanCallback* callback;
+	Nan::Callback* callback;
 	env *ew;
 	MDB_env *dbenv;
 	int rc;
@@ -133,13 +133,14 @@ void after_sync_cb(uv_work_t *request, int) {
 	// Executed after the sync is finished
 	uv_env_sync *d = static_cast<uv_env_sync*>(request->data);
 	const unsigned argc = 1;
-	Handle<Value> argv[argc];
+	//Handle<Value> argv[argc];
+	Local<Value> argv[argc];
 
 	if (d->rc == 0) {
-		argv[0] = NanNull();
+		argv[0] = Nan::Null();
 	}
 	else {
-		argv[0] = Exception::Error(NanNew<String>(mdb_strerror(d->rc)));
+		argv[0] = Exception::Error(Nan::New<String>(mdb_strerror(d->rc)).ToLocalChecked());
 	}
 
 	d->callback->Call(argc, argv);
@@ -148,26 +149,26 @@ void after_sync_cb(uv_work_t *request, int) {
 }
 
 NAN_METHOD(env::sync) {
-	NanScope();
+	Nan::HandleScope();
 
-	env *ew = ObjectWrap::Unwrap<env>(args.This());
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 
 	if (!ew->_env) {
-		NanThrowError("The environment is already closed.");
-		NanReturnUndefined();
+		Nan::ThrowError("The environment is already closed.");
+		return;//return;
 	}
 
-	Handle<Function> callback = Handle<Function>::Cast(args[0]);
+	Handle<Function> callback = Handle<Function>::Cast(info[0]);
 
 	uv_env_sync *d = new uv_env_sync;
 	d->request.data = d;
 	d->ew = ew;
 	d->dbenv = ew->_env;
-	d->callback = new NanCallback(callback);
+	d->callback = new Nan::Callback(callback);
 
 	uv_queue_work(uv_default_loop(), &d->request, sync_cb, after_sync_cb);
 
-	NanReturnUndefined();
+	return;//return;
 }
 
 env::env() : _env(NULL), _read_lock(NULL) {

@@ -7,9 +7,9 @@
 using namespace v8;
 
 void init(v8::Handle<v8::Object> exports) {
-	exports->Set(NanNew("lmdb"), kv::lmdb::v8export());
-	exports->Set(NanNew("leveldb"), kv::level::v8export());
-	exports->Set(NanNew("rocksdb"), kv::rocks::v8export());
+	exports->Set(Nan::New("lmdb").ToLocalChecked(), kv::lmdb::v8export());
+	exports->Set(Nan::New("leveldb").ToLocalChecked(), kv::level::v8export());
+	exports->Set(Nan::New("rocksdb").ToLocalChecked(), kv::rocks::v8export());
 }
 
 NODE_MODULE(kv, init);

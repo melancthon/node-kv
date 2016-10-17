@@ -40,20 +40,20 @@ template <class K, class V> void db<K, V>::setup_export(Handle<Object>& exports)
 	sprintf(class_name, "DB_%s_%s", K::type_name, V::type_name);
 
 	// Prepare constructor template
-	Local<FunctionTemplate> dbiTpl = NanNew<FunctionTemplate>(db::ctor);
-	dbiTpl->SetClassName(NanNew(class_name));
+	Local<FunctionTemplate> dbiTpl = Nan::New<FunctionTemplate>(db::ctor);//.ToLocalChecked();
+	dbiTpl->SetClassName(Nan::New(class_name).ToLocalChecked());
 	dbiTpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	// Add functions to the prototype
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "close", db::close);
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "get", db::get);
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "put", db::put);
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "del", db::del);
-	NODE_SET_PROTOTYPE_METHOD(dbiTpl, "exists", db::exists);
+	Nan::SetPrototypeMethod(dbiTpl, "close", db::close);
+	Nan::SetPrototypeMethod(dbiTpl, "get", db::get);
+	Nan::SetPrototypeMethod(dbiTpl, "put", db::put);
+	Nan::SetPrototypeMethod(dbiTpl, "del", db::del);
+	Nan::SetPrototypeMethod(dbiTpl, "exists", db::exists);
 	// TODO: wrap mdb_stat too
 
 	// Set exports
-	exports->Set(NanNew(class_name), dbiTpl->GetFunction());
+	exports->Set(Nan::New(class_name).ToLocalChecked(), dbiTpl->GetFunction());
 }
 
 #define KVDB db<K, V>
@@ -61,31 +61,31 @@ template <class K, class V> void db<K, V>::setup_export(Handle<Object>& exports)
 
 KVDB_METHOD(ctor) {
 	int rc = 0;
-	NanScope();
+	Nan::HandleScope();
 
 	MDB_txn *txn;
 	MDB_dbi dbi;
-	env *ew = node::ObjectWrap::Unwrap<env>(args[0]->ToObject());
+	env *ew = Nan::ObjectWrap::Unwrap<env>(info[0]->ToObject());
 
-	if (args[1]->IsObject()) {
-		Local<Object> options = args[1]->ToObject();
-		NanUtf8String name(options->Get(NanNew("name")));
-		bool allowdup = options->Get(NanNew("allowDup"))->BooleanValue();
+	if (info[1]->IsObject()) {
+		Local<Object> options = info[1]->ToObject();
+		Nan::Utf8String name(options->Get(Nan::New("name").ToLocalChecked()));
+		bool allowdup = options->Get(Nan::New("allowDup").ToLocalChecked())->BooleanValue();
 
 		// Open transaction
 		rc = mdb_txn_begin(ew->_env, NULL, 0, &txn);
 		if (rc != 0) {
 			mdb_txn_abort(txn);
-			NanThrowError(mdb_strerror(rc));
-			NanReturnUndefined();
+			Nan::ThrowError(mdb_strerror(rc));
+			return; //return;
 		}
 
 		// Open database
 		rc = mdb_dbi_open(txn, *name, allowdup ? MDB_CREATE | MDB_DUPSORT : MDB_CREATE, &dbi);
 		if (rc != 0) {
 			mdb_txn_abort(txn);
-			NanThrowError(mdb_strerror(rc));
-			NanReturnUndefined();
+			Nan::ThrowError(mdb_strerror(rc));
+			return;//return;
 		}
 
 		// Set compare function.
@@ -95,24 +95,24 @@ KVDB_METHOD(ctor) {
 		// Commit transaction
 		rc = mdb_txn_commit(txn);
 		if (rc != 0) {
-			NanThrowError(mdb_strerror(rc));
-			NanReturnUndefined();
+			Nan::ThrowError(mdb_strerror(rc));
+			return;//return;
 		}
 	}
 	else {
-		NanThrowError("Invalid parameters.");
-		NanReturnUndefined();
+		Nan::ThrowError("Invalid parameters.");
+		return; //return;
 	}
 
 	db* ptr = new db(ew, dbi);
-	ptr->Wrap(args.This());
-	NanReturnValue(args.This());
+	ptr->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 KVDB_METHOD(close) {
-	NanScope();
+	Nan::HandleScope();
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
 	mdb_dbi_close(dw->_env->_env, dw->_dbi);
 
 	if (dw->_cur) {
@@ -120,14 +120,14 @@ KVDB_METHOD(close) {
 		dw->_cur = NULL;
 	}
 
-	NanReturnUndefined();
+	return; //return;
 }
 
 class kv::lmdb::txn_scope {
 public:
 	txn_scope(Local<Value> arg, MDB_env *env) : _env(NULL), _txn(NULL), _readonly(false), _created(false), _commit(false) {
 		if (arg->IsObject()) {
-			_txn = node::ObjectWrap::Unwrap<txn>(arg->ToObject())->_txn;
+			_txn = Nan::ObjectWrap::Unwrap<txn>(arg->ToObject())->_txn;
 		} else {
 			_created = true;
 			mdb_txn_begin(env, NULL, 0, &_txn);
@@ -136,7 +136,7 @@ public:
 
 	txn_scope(Local<Value> arg, env *env) : _env(env), _txn(NULL), _readonly(true), _created(false), _commit(false) {
 		if (arg->IsObject()) {
-			_txn = node::ObjectWrap::Unwrap<txn>(arg->ToObject())->_txn;
+			_txn = Nan::ObjectWrap::Unwrap<txn>(arg->ToObject())->_txn;
 		}
 		else {
 			_created = true;
@@ -180,11 +180,11 @@ private:
 };
 
 KVDB_METHOD(get) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
-	K key = K(args[0]);
-	txn_scope tc(args[1], dw->_env);
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
+	K key = K(info[0]);
+	txn_scope tc(info[1], dw->_env);
 
 	MDB_val k, v;
 	k.mv_data = (void*)key.data();
@@ -193,25 +193,25 @@ KVDB_METHOD(get) {
 	int rc = mdb_get(*tc, dw->_dbi, &k, &v);
 
 	if (rc == MDB_NOTFOUND) {
-		NanReturnNull();
+		info.GetReturnValue().Set(Nan::Null());
 	}
 
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;
 	}
 
 	V val((const char*)v.mv_data, v.mv_size);
-	NanReturnValue(val.v8value());
+	info.GetReturnValue().Set(val.v8value());
 }
 
 KVDB_METHOD(put) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
-	K key = K(args[0]);
-	V val = V(args[1]);
-	txn_scope tc(args[2], dw->_env->_env);
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
+	K key = K(info[0]);
+	V val = V(info[1]);
+	txn_scope tc(info[2], dw->_env->_env);
 
 	MDB_val k, v;
 	k.mv_data = (void*)key.data();
@@ -221,20 +221,20 @@ KVDB_METHOD(put) {
 
 	int rc = mdb_put(*tc, dw->_dbi, &k, &v, 0);
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;
 	}
 
 	tc.commit();
-	NanReturnValue(NanNew(true));
+	info.GetReturnValue().Set(Nan::New(true));
 }
 
 KVDB_METHOD(del) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
-	K key = K(args[0]);
-	txn_scope tc(args[1], dw->_env->_env);
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
+	K key = K(info[0]);
+	txn_scope tc(info[1], dw->_env->_env);
 
 	MDB_val k;
 	k.mv_data = (void*)key.data();
@@ -243,24 +243,24 @@ KVDB_METHOD(del) {
 	int rc = mdb_del(*tc, dw->_dbi, &k, NULL);
 
 	if (rc == MDB_NOTFOUND) {
-		NanReturnValue(NanNew(false));
+		info.GetReturnValue().Set(Nan::New(false));
 	}
 
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;
 	}
 
 	tc.commit();
-	NanReturnValue(NanNew(true));
+	info.GetReturnValue().Set(Nan::New(true));
 }
 
 KVDB_METHOD(exists) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db *dw = ObjectWrap::Unwrap<db>(args.This());
-	K key = K(args[0]);
-	V val = V(args[1]);
+	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
+	K key = K(info[0]);
+	V val = V(info[1]);
 
 	MDB_val k, v;
 	k.mv_data = (void*)key.data();
@@ -268,7 +268,7 @@ KVDB_METHOD(exists) {
 	v.mv_data = (void*)val.data();
 	v.mv_size = val.size();
 
-	txn_scope tc(args[2], dw->_env);
+	txn_scope tc(info[2], dw->_env);
 	MDB_cursor *cur = NULL;
 	if (tc.is_created()) {
 		if (!dw->_cur) mdb_cursor_open(*tc, dw->_dbi, &dw->_cur);
@@ -284,12 +284,12 @@ KVDB_METHOD(exists) {
 	}
 
 	if (rc == MDB_NOTFOUND) {
-		NanReturnValue(NanNew(false));
+		info.GetReturnValue().Set(Nan::New(false));
 	} else if (rc == 0) {
-		NanReturnValue(NanNew(true));
+		info.GetReturnValue().Set(Nan::New(true));
 	} else {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;
 	}
 }
 

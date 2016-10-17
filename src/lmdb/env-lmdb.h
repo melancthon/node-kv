@@ -4,7 +4,7 @@
 
 namespace kv {
 	namespace lmdb {
-		class env : public node::ObjectWrap {
+		class env : public Nan::ObjectWrap {
 		public:
 			static void setup_export(v8::Handle<v8::Object>& exports);
 

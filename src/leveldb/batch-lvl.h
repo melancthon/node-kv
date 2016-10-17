@@ -4,7 +4,7 @@
 
 namespace kv {
 	namespace level {
-		class batch : public node::ObjectWrap {
+		class batch : public Nan::ObjectWrap {
 		public:
 			typedef leveldb::WriteBatch batch_type;
 

@@ -10,7 +10,7 @@
 using namespace v8;
 
 Handle<Object> kv::rocks::v8export() {
-	Local<Object> ret = NanNew<Object>();
+	Local<Object> ret = Nan::New<Object>();
 
 	env::setup_export(ret);
 	setup_db_export(ret);

@@ -4,7 +4,7 @@
 
 namespace kv {
 	namespace rocks {
-		class batch : public node::ObjectWrap {
+		class batch : public Nan::ObjectWrap {
 		public:
 			typedef rocksdb::WriteBatch batch_type;
 

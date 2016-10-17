@@ -9,7 +9,7 @@
 using namespace v8;
 
 Handle<Object> kv::level::v8export() {
-	Local<Object> ret = NanNew<Object>();
+	Local<Object> ret = Nan::New<Object>();
 
 	setup_db_export(ret);
 	setup_cursor_export(ret);

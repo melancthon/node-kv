@@ -15,7 +15,7 @@ binary_type::binary_type(const char* val, size_t sz) : _data(val), _size(sz) {
 }
 
 Local<Value> binary_type::v8value() {
-	return NanNewBufferHandle(_data, _size);
+	return Nan::CopyBuffer(_data, _size).ToLocalChecked();
 }
 
 const char* binary_type::data() {
@@ -42,7 +42,7 @@ string_type::~string_type() {
 }
 
 Local<Value> string_type::v8value() {
-	return NanNew(_data);
+	return Nan::New(_data).ToLocalChecked();
 }
 
 const char* string_type::data() {
@@ -54,7 +54,7 @@ size_t string_type::size() {
 }
 
 hex_type::hex_type(Handle<Value> val) : _mem(NULL), _is_allocated(false) {
-	NanUtf8String utf8(val);
+	Nan::Utf8String utf8(val);
 	size_t sz = (utf8.length() + 1) / 2;
 
 	char *dest = sz > sizeof(_buf) ? (_is_allocated = true, _mem = new char[sz]) : _buf;
@@ -87,7 +87,7 @@ Local<Value> hex_type::v8value() {
 		cur += 2;
 	}
 
-	Local<String> ret = NanNew(dest);
+	Local<String> ret = Nan::New(dest).ToLocalChecked();
 	if (dest != buf) delete[] dest;
 	return ret;
 }

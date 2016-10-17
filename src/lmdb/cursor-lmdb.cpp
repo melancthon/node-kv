@@ -20,96 +20,96 @@ template<class K, class V> void cursor<K, V>::setup_export(Handle<Object>& expor
 	sprintf(class_name, "Cursor_%s_%s", K::type_name, V::type_name);
 
 	// Prepare constructor template
-	Local<FunctionTemplate> cursorTpl = NanNew<FunctionTemplate>(cursor::ctor);
-	cursorTpl->SetClassName(NanNew(class_name));
+	Local<FunctionTemplate> cursorTpl = Nan::New<FunctionTemplate>(cursor::ctor);//.ToLocalChecked();
+	cursorTpl->SetClassName(Nan::New(class_name).ToLocalChecked());
 	cursorTpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	// Add functions to the prototype
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "close", cursor::close);
+	Nan::SetPrototypeMethod(cursorTpl, "close", cursor::close);
 
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "del", cursor::del);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "key", cursor::key);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "val", cursor::value);
+	Nan::SetPrototypeMethod(cursorTpl, "del", cursor::del);
+	Nan::SetPrototypeMethod(cursorTpl, "key", cursor::key);
+	Nan::SetPrototypeMethod(cursorTpl, "val", cursor::value);
 
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "next", cursor::next);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "prev", cursor::prev);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "nextDup", cursor::nextDup);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "prevDup", cursor::prevDup);
+	Nan::SetPrototypeMethod(cursorTpl, "next", cursor::next);
+	Nan::SetPrototypeMethod(cursorTpl, "prev", cursor::prev);
+	Nan::SetPrototypeMethod(cursorTpl, "nextDup", cursor::nextDup);
+	Nan::SetPrototypeMethod(cursorTpl, "prevDup", cursor::prevDup);
 
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "seek", cursor::seek);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "gte", cursor::gte);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "first", cursor::first);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "last", cursor::last);
+	Nan::SetPrototypeMethod(cursorTpl, "seek", cursor::seek);
+	Nan::SetPrototypeMethod(cursorTpl, "gte", cursor::gte);
+	Nan::SetPrototypeMethod(cursorTpl, "first", cursor::first);
+	Nan::SetPrototypeMethod(cursorTpl, "last", cursor::last);
 
 	// Set exports
-	exports->Set(NanNew(class_name), cursorTpl->GetFunction());
+	exports->Set(Nan::New(class_name).ToLocalChecked(), cursorTpl->GetFunction());
 }
 
 #define KVCURSOR cursor<K, V>
 #define KVCURSOR_METHOD(fn) template <class K, class V> NAN_METHOD(KVCURSOR::fn)
 
 KVCURSOR_METHOD(ctor) {
-	NanScope();
+	Nan::HandleScope();
 
-	db<K, V> *dw = ObjectWrap::Unwrap<db<K, V> >(args[0]->ToObject());
-	txn *tw = ObjectWrap::Unwrap<txn>(args[1]->ToObject());
+	db<K, V> *dw = Nan::ObjectWrap::Unwrap<db<K, V> >(info[0]->ToObject());
+	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info[1]->ToObject());
 
 	MDB_cursor *cur = NULL;
 	int rc = mdb_cursor_open(tw->_txn, dw->_dbi, &cur);
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return; //return;
 	}
 
 	cursor *ptr = new cursor(cur);
-	ptr->Wrap(args.This());
-	NanReturnValue(args.This());
+	ptr->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 KVCURSOR_METHOD(close) {
-	NanScope();
+	Nan::HandleScope();
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 	mdb_cursor_close(cw->_cursor);
 	cw->_cursor = NULL;
 
-	NanReturnUndefined();
+	return; //return;
 }
 
 KVCURSOR_METHOD(del) {
-	NanScope();
+	Nan::HandleScope();
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 	int rc = mdb_cursor_del(cw->_cursor, 0);
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
-	NanReturnUndefined();
+	return;//return;
 }
 
 template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::cursorOp) {
-	NanScope();
+	Nan::HandleScope();
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
 	MDB_val key = { 0, 0 }, data = { 0, 0 };
 	int rc = mdb_cursor_get(cw->_cursor, &key, &data, OP);
 	if (rc != 0 && rc != MDB_NOTFOUND) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
-	NanReturnValue(NanNew(rc != MDB_NOTFOUND));
+	info.GetReturnValue().Set(Nan::New(rc != MDB_NOTFOUND));//.ToLocalChecked());
 }
 
 template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::cursorKeyOp) {
-	NanScope();
+	Nan::HandleScope();
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
-	K k = K(args[0]);
+	K k = K(info[0]);
 
 	MDB_val key = { 0, 0 }, data = { 0, 0 };
 	key.mv_data = (void*)k.data();
@@ -117,20 +117,20 @@ template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::curso
 
 	int rc = mdb_cursor_get(cw->_cursor, &key, &data, OP);
 	if (rc != 0 && rc != MDB_NOTFOUND) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
-	NanReturnValue(NanNew(rc != MDB_NOTFOUND));
+	info.GetReturnValue().Set(Nan::New(rc != MDB_NOTFOUND));//.ToLocalChecked());
 }
 
 template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::cursorKeyValOp) {
-	NanScope();
+	Nan::HandleScope();
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
-	K k = K(args[0]);
-	V v = V(args[1]);
+	K k = K(info[0]);
+	V v = V(info[1]);
 
 	MDB_val key = { 0, 0 }, data = { 0, 0 };
 	key.mv_data = (void*)k.data();
@@ -140,69 +140,69 @@ template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::curso
 
 	int rc = mdb_cursor_get(cw->_cursor, &key, &data, OP);
 	if (rc != 0 && rc != MDB_NOTFOUND) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
-	NanReturnValue(NanNew(rc != MDB_NOTFOUND));
+	info.GetReturnValue().Set(Nan::New(rc != MDB_NOTFOUND));//.ToLocalChecked());
 }
 
 KVCURSOR_METHOD(key) {
-	NanScope();
+	Nan::HandleScope();
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
 	MDB_val key = { 0, 0 }, data = { 0, 0 };
 	int rc = mdb_cursor_get(cw->_cursor, &key, &data, MDB_GET_CURRENT);
 
 	if (rc == MDB_NOTFOUND) {
-		NanReturnNull();
+		info.GetReturnValue().Set(Nan::Null());
 	}
 
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
-	NanReturnValue(K((const char*)key.mv_data, key.mv_size).v8value());
+	info.GetReturnValue().Set(K((const char*)key.mv_data, key.mv_size).v8value());
 }
 
 KVCURSOR_METHOD(value) {
-	NanScope();
+	Nan::HandleScope();
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
 	MDB_val key = { 0, 0 }, data = { 0, 0 };
 	int rc = mdb_cursor_get(cw->_cursor, &key, &data, MDB_GET_CURRENT);
 
 	if (rc == MDB_NOTFOUND) {
-		NanReturnNull();
+		info.GetReturnValue().Set(Nan::Null());
 	}
 
 	if (rc != 0) {
-		NanThrowError(mdb_strerror(rc));
-		NanReturnUndefined();
+		Nan::ThrowError(mdb_strerror(rc));
+		return;//return;
 	}
 
-	NanReturnValue(V((const char*)data.mv_data, data.mv_size).v8value());
+	info.GetReturnValue().Set(V((const char*)data.mv_data, data.mv_size).v8value());
 }
 
-KVCURSOR_METHOD(next) { return cursorOp<MDB_NEXT>(args); }
-KVCURSOR_METHOD(prev) { return cursorOp<MDB_PREV>(args); }
-KVCURSOR_METHOD(nextDup) { return cursorOp<MDB_NEXT_DUP>(args); }
-KVCURSOR_METHOD(prevDup) { return cursorOp<MDB_PREV_DUP>(args); }
+KVCURSOR_METHOD(next) { return cursorOp<MDB_NEXT>(info); }
+KVCURSOR_METHOD(prev) { return cursorOp<MDB_PREV>(info); }
+KVCURSOR_METHOD(nextDup) { return cursorOp<MDB_NEXT_DUP>(info); }
+KVCURSOR_METHOD(prevDup) { return cursorOp<MDB_PREV_DUP>(info); }
 
-KVCURSOR_METHOD(first) { return cursorOp<MDB_FIRST>(args); }
-KVCURSOR_METHOD(last) { return cursorOp<MDB_LAST>(args); }
-KVCURSOR_METHOD(firstDup) { return cursorOp<MDB_FIRST_DUP>(args); }
-KVCURSOR_METHOD(lastDup) { return cursorOp<MDB_LAST_DUP>(args); }
+KVCURSOR_METHOD(first) { return cursorOp<MDB_FIRST>(info); }
+KVCURSOR_METHOD(last) { return cursorOp<MDB_LAST>(info); }
+KVCURSOR_METHOD(firstDup) { return cursorOp<MDB_FIRST_DUP>(info); }
+KVCURSOR_METHOD(lastDup) { return cursorOp<MDB_LAST_DUP>(info); }
 
 KVCURSOR_METHOD(seek) {
-	return args.Length() == 1 ? cursorKeyOp<MDB_SET>(args) : cursorKeyValOp<MDB_GET_BOTH>(args);
+	return info.Length() == 1 ? cursorKeyOp<MDB_SET>(info) : cursorKeyValOp<MDB_GET_BOTH>(info);
 }
 
 KVCURSOR_METHOD(gte) {
-	return args.Length() == 1 ? cursorKeyOp<MDB_SET_RANGE>(args) : cursorKeyValOp<MDB_GET_BOTH_RANGE>(args);
+	return info.Length() == 1 ? cursorKeyOp<MDB_SET_RANGE>(info) : cursorKeyValOp<MDB_GET_BOTH_RANGE>(info);
 }
 
 template <class K, class V> cursor<K, V>::cursor(MDB_cursor *cur) : _cursor(cur) {

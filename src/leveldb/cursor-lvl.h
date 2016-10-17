@@ -6,7 +6,7 @@ namespace kv {
 	namespace level {
 		void setup_cursor_export(v8::Handle<v8::Object>& exports);
 
-		template <class K, class V> class cursor : public node::ObjectWrap {
+		template <class K, class V> class cursor : public Nan::ObjectWrap {
 		public:
 			typedef K key_type;
 			typedef V value_type;

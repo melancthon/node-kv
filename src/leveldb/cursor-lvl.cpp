@@ -19,96 +19,96 @@ template<class K, class V> void cursor<K, V>::setup_export(Handle<Object>& expor
 	sprintf(class_name, "Cursor_%s_%s", K::type_name, V::type_name);
 
 	// Prepare constructor template
-	Local<FunctionTemplate> cursorTpl = NanNew<FunctionTemplate>(cursor::ctor);
-	cursorTpl->SetClassName(NanNew(class_name));
+	Local<FunctionTemplate> cursorTpl = Nan::New<FunctionTemplate>(cursor::ctor);
+	cursorTpl->SetClassName(Nan::New(class_name).ToLocalChecked());
 	cursorTpl->InstanceTemplate()->SetInternalFieldCount(1);
 
 	// Add functions to the prototype
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "key", cursor::key);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "val", cursor::value);
+	Nan::SetPrototypeMethod(cursorTpl, "key", cursor::key);
+	Nan::SetPrototypeMethod(cursorTpl, "val", cursor::value);
 
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "next", cursor::next);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "prev", cursor::prev);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "first", cursor::first);
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "last", cursor::last);
+	Nan::SetPrototypeMethod(cursorTpl, "next", cursor::next);
+	Nan::SetPrototypeMethod(cursorTpl, "prev", cursor::prev);
+	Nan::SetPrototypeMethod(cursorTpl, "first", cursor::first);
+	Nan::SetPrototypeMethod(cursorTpl, "last", cursor::last);
 
-	NODE_SET_PROTOTYPE_METHOD(cursorTpl, "gte", cursor::gte);
+	Nan::SetPrototypeMethod(cursorTpl, "gte", cursor::gte);
 
 	// Set exports
-	exports->Set(NanNew(class_name), cursorTpl->GetFunction());
+	exports->Set(Nan::New(class_name).ToLocalChecked(), cursorTpl->GetFunction());
 }
 
 #define KVCURSOR cursor<K, V>
 #define KVCURSOR_METHOD(fn) template <class K, class V> NAN_METHOD(KVCURSOR::fn)
 
 KVCURSOR_METHOD(ctor) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	db<K, V> *dw = ObjectWrap::Unwrap<db<K, V> >(args[0]->ToObject());
+	db<K, V> *dw = Nan::ObjectWrap::Unwrap<db<K, V> >(info[0]->ToObject());
 	iterator_type *cur = dw->_db->NewIterator(typename db<K, V>::readoption_type());
 
 	cursor *ptr = new cursor(cur);
-	ptr->Wrap(args.This());
-	NanReturnValue(args.This());
+	ptr->Wrap(info.This());
+	info.GetReturnValue().Set(info.This());
 }
 
 template<class K, class V> template<void (KVCURSOR::iterator_type::*FN)()> NAN_METHOD(KVCURSOR::cursorOp) {
-	NanScope();
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	Nan::HandleScope scope;
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 	(cw->_cursor->*FN)();
-	NanReturnValue(NanNew(cw->_cursor->Valid()));
+	info.GetReturnValue().Set(Nan::New(cw->_cursor->Valid()));
 }
 
 KVCURSOR_METHOD(key) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 	if (!cw->_cursor->Valid()) {
-		NanReturnNull();
+		info.GetReturnValue().Set(Nan::Null());
 	}
 
 	typename db<K, V>::slice_type key(cw->_cursor->key());
-	NanReturnValue(K(key.data(), key.size()).v8value());
+	info.GetReturnValue().Set(K(key.data(), key.size()).v8value());
 }
 
 KVCURSOR_METHOD(value) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 	if (!cw->_cursor->Valid()) {
-		NanReturnNull();
+		info.GetReturnValue().Set(Nan::Null());
 	}
 
 	typename db<K, V>::slice_type val(cw->_cursor->value());
-	NanReturnValue(V(val.data(), val.size()).v8value());
+	info.GetReturnValue().Set(V(val.data(), val.size()).v8value());
 }
 
 KVCURSOR_METHOD(next) {
-	return cursorOp<&iterator_type::Next>(args);
+	return cursorOp<&iterator_type::Next>(info);
 }
 
 KVCURSOR_METHOD(prev) {
-	return cursorOp<&iterator_type::Prev>(args);
+	return cursorOp<&iterator_type::Prev>(info);
 }
 
 KVCURSOR_METHOD(first) {
-	return cursorOp<&iterator_type::SeekToFirst>(args);
+	return cursorOp<&iterator_type::SeekToFirst>(info);
 }
 
 KVCURSOR_METHOD(last) {
-	return cursorOp<&iterator_type::SeekToLast>(args);
+	return cursorOp<&iterator_type::SeekToLast>(info);
 }
 
 KVCURSOR_METHOD(gte) {
-	NanScope();
+	Nan::HandleScope scope;
 
-	cursor *cw = ObjectWrap::Unwrap<cursor>(args.This());
+	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
-	K k(args[0]);
+	K k(info[0]);
 	typename db<K, V>::slice_type key(k.data(), k.size());
 	cw->_cursor->Seek(key);
 
-	NanReturnValue(NanNew(cw->_cursor->Valid()));
+	info.GetReturnValue().Set(Nan::New(cw->_cursor->Valid()));
 }
 
 template <class K, class V> cursor<K, V>::cursor(iterator_type *cur) : _cursor(cur) {
