@@ -193,7 +193,7 @@ KVDB_METHOD(get) {
 	int rc = mdb_get(*tc, dw->_dbi, &k, &v);
 
 	if (rc == MDB_NOTFOUND) {
-		info.GetReturnValue().Set(Nan::Null());
+		return info.GetReturnValue().Set(Nan::Null());
 	}
 
 	if (rc != 0) {
@@ -243,7 +243,7 @@ KVDB_METHOD(del) {
 	int rc = mdb_del(*tc, dw->_dbi, &k, NULL);
 
 	if (rc == MDB_NOTFOUND) {
-		info.GetReturnValue().Set(Nan::New(false));
+		return info.GetReturnValue().Set(Nan::New(false));
 	}
 
 	if (rc != 0) {
@@ -284,9 +284,9 @@ KVDB_METHOD(exists) {
 	}
 
 	if (rc == MDB_NOTFOUND) {
-		info.GetReturnValue().Set(Nan::New(false));
+		return info.GetReturnValue().Set(Nan::New(false));
 	} else if (rc == 0) {
-		info.GetReturnValue().Set(Nan::New(true));
+		return info.GetReturnValue().Set(Nan::New(true));
 	} else {
 		Nan::ThrowError(mdb_strerror(rc));
 		return;

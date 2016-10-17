@@ -156,7 +156,7 @@ KVCURSOR_METHOD(key) {
 	int rc = mdb_cursor_get(cw->_cursor, &key, &data, MDB_GET_CURRENT);
 
 	if (rc == MDB_NOTFOUND) {
-		info.GetReturnValue().Set(Nan::Null());
+		return info.GetReturnValue().Set(Nan::Null());
 	}
 
 	if (rc != 0) {
@@ -176,7 +176,7 @@ KVCURSOR_METHOD(value) {
 	int rc = mdb_cursor_get(cw->_cursor, &key, &data, MDB_GET_CURRENT);
 
 	if (rc == MDB_NOTFOUND) {
-		info.GetReturnValue().Set(Nan::Null());
+		return info.GetReturnValue().Set(Nan::Null());
 	}
 
 	if (rc != 0) {
