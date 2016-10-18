@@ -24,7 +24,7 @@ void txn::setup_export(Handle<Object>& exports) {
 }
 
 NAN_METHOD(txn::ctor) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	env *ew = Nan::ObjectWrap::Unwrap<env>(info[0]->ToObject());
 	txn *ptr = new txn(ew->_env, info[1]->BooleanValue());
@@ -41,7 +41,7 @@ NAN_METHOD(txn::ctor) {
 }
 
 NAN_METHOD(txn::commit) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info.This());
 
@@ -61,7 +61,7 @@ NAN_METHOD(txn::commit) {
 }
 
 NAN_METHOD(txn::abort) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info.This());
 
@@ -77,7 +77,7 @@ NAN_METHOD(txn::abort) {
 }
 
 NAN_METHOD(txn::reset) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info.This());
 
@@ -96,7 +96,7 @@ NAN_METHOD(txn::reset) {
 }
 
 NAN_METHOD(txn::renew) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info.This());
 

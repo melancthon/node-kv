@@ -7,7 +7,7 @@ using namespace v8;
 using namespace kv;
 using namespace kv::lmdb;
 
-void env::setup_export(Handle<Object>& exports) {
+void env::setup_export(Local<Object>& exports) {
 	// Prepare constructor template
 	Local<FunctionTemplate> envTpl = Nan::New<FunctionTemplate>(env::ctor);
 	envTpl->SetClassName(Nan::New("Env").ToLocalChecked());
@@ -26,7 +26,7 @@ void env::setup_export(Handle<Object>& exports) {
 }
 
 NAN_METHOD(env::ctor) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	env *ptr = new env();
 	int rc = mdb_env_create(&ptr->_env);
@@ -38,11 +38,11 @@ NAN_METHOD(env::ctor) {
 	}
 
 	ptr->Wrap(info.This());
-	info.GetReturnValue().Set(info.This());
+	return info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(env::setMapSize) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 
@@ -56,7 +56,7 @@ NAN_METHOD(env::setMapSize) {
 }
 
 NAN_METHOD(env::setMaxDbs) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 
@@ -71,7 +71,7 @@ NAN_METHOD(env::setMaxDbs) {
 
 NAN_METHOD(env::open) {
 	int rc = 0;
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 	if (!ew->_env) {
@@ -97,9 +97,15 @@ NAN_METHOD(env::open) {
 }
 
 NAN_METHOD(env::close) {
-	Nan::HandleScope();
+	printf("enc:close");
+
+	Nan::HandleScope scope;
+
+	printf("scope handled");
 
 	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
+
+	printf("evn gotten");
 
 	if (!ew->_env) {
 		Nan::ThrowError("The environment is already closed.");
@@ -109,8 +115,12 @@ NAN_METHOD(env::close) {
 	if (ew->_read_lock) mdb_txn_abort(ew->_read_lock);
 	ew->_read_lock = NULL;
 
+	printf("read lock");
+
 	mdb_env_close(ew->_env);
 	ew->_env = NULL;
+
+	printf("closed");
 
 	return;//return;
 }
@@ -132,24 +142,29 @@ void sync_cb(uv_work_t *request) {
 void after_sync_cb(uv_work_t *request, int) {
 	// Executed after the sync is finished
 	uv_env_sync *d = static_cast<uv_env_sync*>(request->data);
+	
 	const unsigned argc = 1;
 	//Handle<Value> argv[argc];
 	Local<Value> argv[argc];
-
+		
 	if (d->rc == 0) {
+		printf("after_sync_cb 4\n");
 		argv[0] = Nan::Null();
 	}
 	else {
+		printf("after_sync_cb 5\n");
 		argv[0] = Exception::Error(Nan::New<String>(mdb_strerror(d->rc)).ToLocalChecked());
 	}
-
+		
 	d->callback->Call(argc, argv);
+		
 	delete d->callback;
-	delete d;
+		
+	delete d;	
 }
 
 NAN_METHOD(env::sync) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	env *ew = Nan::ObjectWrap::Unwrap<env>(info.This());
 
@@ -158,16 +173,16 @@ NAN_METHOD(env::sync) {
 		return;//return;
 	}
 
-	Handle<Function> callback = Handle<Function>::Cast(info[0]);
+	Local<Function> callback = Local<Function>::Cast(info[0]);
 
 	uv_env_sync *d = new uv_env_sync;
 	d->request.data = d;
 	d->ew = ew;
 	d->dbenv = ew->_env;
 	d->callback = new Nan::Callback(callback);
-
+	
 	uv_queue_work(uv_default_loop(), &d->request, sync_cb, after_sync_cb);
-
+	
 	return;//return;
 }
 

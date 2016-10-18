@@ -80,3 +80,4 @@ var env = new lmdb.Env({
 })();
 
 env.close();
+

@@ -49,7 +49,7 @@ template<class K, class V> void cursor<K, V>::setup_export(Handle<Object>& expor
 #define KVCURSOR_METHOD(fn) template <class K, class V> NAN_METHOD(KVCURSOR::fn)
 
 KVCURSOR_METHOD(ctor) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	db<K, V> *dw = Nan::ObjectWrap::Unwrap<db<K, V> >(info[0]->ToObject());
 	txn *tw = Nan::ObjectWrap::Unwrap<txn>(info[1]->ToObject());
@@ -67,7 +67,7 @@ KVCURSOR_METHOD(ctor) {
 }
 
 KVCURSOR_METHOD(close) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 	mdb_cursor_close(cw->_cursor);
@@ -77,7 +77,7 @@ KVCURSOR_METHOD(close) {
 }
 
 KVCURSOR_METHOD(del) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 	int rc = mdb_cursor_del(cw->_cursor, 0);
@@ -90,7 +90,7 @@ KVCURSOR_METHOD(del) {
 }
 
 template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::cursorOp) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
@@ -105,7 +105,7 @@ template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::curso
 }
 
 template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::cursorKeyOp) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
@@ -125,7 +125,7 @@ template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::curso
 }
 
 template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::cursorKeyValOp) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
@@ -148,7 +148,7 @@ template<class K, class V> template<MDB_cursor_op OP> NAN_METHOD(KVCURSOR::curso
 }
 
 KVCURSOR_METHOD(key) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 
@@ -168,7 +168,7 @@ KVCURSOR_METHOD(key) {
 }
 
 KVCURSOR_METHOD(value) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	cursor *cw = Nan::ObjectWrap::Unwrap<cursor>(info.This());
 

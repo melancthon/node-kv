@@ -61,7 +61,7 @@ template <class K, class V> void db<K, V>::setup_export(Handle<Object>& exports)
 
 KVDB_METHOD(ctor) {
 	int rc = 0;
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	MDB_txn *txn;
 	MDB_dbi dbi;
@@ -110,7 +110,7 @@ KVDB_METHOD(ctor) {
 }
 
 KVDB_METHOD(close) {
-	Nan::HandleScope();
+	Nan::HandleScope scope;
 
 	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
 	mdb_dbi_close(dw->_env->_env, dw->_dbi);
