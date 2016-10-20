@@ -32,7 +32,7 @@
 #elif defined(_MSC_VER)
   //#include "stdint-msvc2008.h"
   #define PLATFORM_IS_LITTLE_ENDIAN true
-  #define snprintf _snprintf
+  //#define snprintf _snprintf
   #define close _close
   #define fread_unlocked _fread_nolock
 #else
