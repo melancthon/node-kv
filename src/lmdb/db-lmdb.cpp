@@ -234,13 +234,16 @@ KVDB_METHOD(del) {
 
 	db *dw = Nan::ObjectWrap::Unwrap<db>(info.This());
 	K key = K(info[0]);
-	txn_scope tc(info[1], dw->_env->_env);
+	V val = V(info[1]);
+	txn_scope tc(info[2], dw->_env->_env);
 
-	MDB_val k;
+	MDB_val k, v;
 	k.mv_data = (void*)key.data();
 	k.mv_size = key.size();
+	v.mv_data = (void*)val.data(); 
+	v.mv_size = val.size();
 
-	int rc = mdb_del(*tc, dw->_dbi, &k, NULL);
+	int rc = mdb_del(*tc, dw->_dbi, &k, &v)
 
 	if (rc == MDB_NOTFOUND) {
 		return info.GetReturnValue().Set(Nan::New(false));

@@ -1320,7 +1320,7 @@ class PosixEnv : public Env {
 
   virtual void Schedule(void (*function)(void*), void* arg, Priority pri = LOW) override;
 
-  virtual void StartThread(void (*function)(void* arg), void* arg); override
+  virtual void StartThread(void (*function)(void* arg), void* arg) override; 
 
   virtual void WaitForJoin() override;
 

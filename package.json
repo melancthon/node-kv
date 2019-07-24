@@ -1,6 +1,6 @@
 {
   "name": "kv-node",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "repository": "https://github.com/melancthon/node-kv.git",
   "description": "An embeded key-value store for node.js, extremely fast.",
   "readmeFile": "README.md",
